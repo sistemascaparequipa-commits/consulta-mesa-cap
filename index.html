@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Consulta Mesa por CAP</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; max-width:720px; margin:30px auto; padding:10px; }
+    input { padding:8px; font-size:1rem; width:200px; }
+    button { padding:8px 12px; font-size:1rem; }
+    .result { margin-top:20px; padding:12px; border-radius:8px; box-shadow:0 0 6px rgba(0,0,0,0.08); }
+  </style>
+</head>
+<body>
+  <h1>Consulta tu Mesa de Votación</h1>
+  <p>Ingresa tu número de <strong>CAP</strong> y presiona Buscar.</p>
+
+  <div>
+    <label for="cap">N° CAP:</label>
+    <input id="cap" inputmode="numeric" placeholder="Ej: 1234" />
+    <button id="buscar">Buscar</button>
+  </div>
+
+  <div id="mensaje" class="result" style="display:none;"></div>
+
+  <script>
+    // Reemplaza por la URL de tu Apps Script desplegado
+    const API_URL = "https://script.google.com/macros/s/AKfycbyCTUjUEIDUzEcewmYxUX5arZ_-22TOo43KwlL9YezfHZvLNnUY4upHU4cotpZA-MQLcg/exec";
+    // Si usaste secret, añade: const SECRET = "TU_SECRET";
+
+    document.getElementById('buscar').addEventListener('click', buscar);
+    document.getElementById('cap').addEventListener('keydown', function(e){
+      if (e.key === 'Enter') buscar();
+    });
+
+    function mostrar(text, isError = false){
+      const el = document.getElementById('mensaje');
+      el.style.display = 'block';
+      el.style.color = isError ? 'white' : 'black';
+      el.style.background = isError ? '#e74c3c' : '#ecf0f1';
+      el.innerHTML = text;
+    }
+
+    async function buscar(){
+      const cap = document.getElementById('cap').value.trim();
+      if (!cap) {
+        mostrar('Ingresa un N° CAP válido.', true);
+        return;
+      }
+
+      mostrar('Buscando...');
+
+      try {
+        // Si usas secret: fetch(`${API_URL}?cap=${encodeURIComponent(cap)}&_secret=${SECRET}`)
+        const resp = await fetch(`${API_URL}?cap=${encodeURIComponent(cap)}`);
+        if (!resp.ok) throw new Error('Error en la petición');
+        const data = await resp.json();
+
+        if (data.found) {
+          // Muestra campos: Nombre y Mesa (ajusta si tus encabezados son distintos)
+          const d = data.data;
+          const nombre = d["Nombre"] || d["NOMBRE"] || d["Nombre completo"] || d["Nombre completo"] || "";
+          const mesa = d["Mesa"] || d["MESA"] || d["Mesa de votación"] || d["Mesa de votacion"] || "";
+
+          let html = `<strong>CAP:</strong> ${cap}<br/>`;
+          if (nombre) html += `<strong>Nombre:</strong> ${nombre}<br/>`;
+          if (mesa) html += `<strong>Mesa asignada:</strong> ${mesa}<br/>`;
+          mostrar(html, false);
+        } else {
+          mostrar('No se encontró el CAP en la base de datos.', true);
+        }
+      } catch (err) {
+        console.error(err);
+        mostrar('Ocurrió un error. Revisa la consola o la URL del API.', true);
+      }
+    }
+  </script>
+</body>
+</html>
